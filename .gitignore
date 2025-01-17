@@ -1,0 +1,15 @@
+.idea/
+Library/
+.vscode/
+obj/
+Logs/
+Temp/
+.vsconfig
+.vs/
+*.suo
+UserSettings/
+build/
+BUILD/
+Build/
+*.csproj
+*.DS_Store
