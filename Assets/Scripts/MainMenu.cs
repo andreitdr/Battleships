@@ -16,7 +16,12 @@ public class MainMenu : MonoBehaviour
         StartCoroutine(SendMessageToArduinoAsync(msg));
         Debug.Log("Sent: " + msg);
     }
-    
+
+    private void Start()
+    {
+        Screen.SetResolution(1920, 1080, FullScreenMode.FullScreenWindow);
+    }
+
     public void StartGame()
     {
         gameMenu.StartTimerNow();

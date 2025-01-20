@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using TMPro;
 
@@ -20,14 +21,23 @@ public class GameMenu : MonoBehaviour
     private int attacksLeft;
     private int shipsDestroyed;
     
+    private float updateInterval = 1f;
+    private float timeSinceLastUpdate = 0f;
+
     private void Update()
     {
         if (isTimerRunning)
         {
             elapsedTime += Time.deltaTime;
-            int minutes = (int)(elapsedTime / 60f);
-            int seconds = (int)(elapsedTime % 60f);
-            timerText.text = string.Format("{0:00}:{1:00}", minutes, seconds);
+            timeSinceLastUpdate += Time.deltaTime;
+            
+            if (timeSinceLastUpdate >= updateInterval)
+            {
+                timeSinceLastUpdate = 0f;
+                int minutes = (int)(elapsedTime / 60f);
+                int seconds = (int)(elapsedTime % 60f);
+                timerText.text = string.Format("{0:00}:{1:00}", minutes, seconds);
+            }
         }
     }
     
@@ -44,16 +54,17 @@ public class GameMenu : MonoBehaviour
         shipsDestroyedText.text  = shipsDestroyed.ToString();
         
         elapsedTime = 0f;
+        timeSinceLastUpdate = 0f;
         isTimerRunning = true;
     }
     
     public void StartTimerNow()
     {
         elapsedTime = 0f;     
+        timeSinceLastUpdate = 0f;
         isTimerRunning = true;
     }
 
-    
     public void OnAttack()
     {
         attacksLeft--;
@@ -66,7 +77,6 @@ public class GameMenu : MonoBehaviour
         shipsDestroyed++;
         shipsDestroyedText.text = shipsDestroyed.ToString();
     }
-    
     
     public void OnWin()
     {

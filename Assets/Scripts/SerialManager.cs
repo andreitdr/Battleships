@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.IO.Ports;
-using System.Collections;
+using System.Collections.Concurrent;
+using System.Threading;
 
 public class SerialManager : MonoBehaviour 
 {
@@ -9,7 +10,7 @@ public class SerialManager : MonoBehaviour
 
     private SerialPort port;
 
-    [SerializeField] private string portName = "COM3";  // "/dev/ttyUSB0" for Linux etc.
+    [SerializeField] private string portName = "COM3";  // Exemplu: "/dev/ttyUSB0" pe Linux
     [SerializeField] private int baudRate = 9600;
     
     [SerializeField] private GameMenu gameMenu;
@@ -17,6 +18,11 @@ public class SerialManager : MonoBehaviour
     
     private int pendingShips  = -1;
     private int pendingAttacks = -1;
+    
+    private Thread readThread;
+    private bool isReading = false;
+    
+    private ConcurrentQueue<string> messageQueue = new ConcurrentQueue<string>();
 
     private void Awake() {
         if (instance == null) { 
@@ -37,29 +43,41 @@ public class SerialManager : MonoBehaviour
             port.ReadTimeout = 500;
             port.Open();
             Debug.Log("Port opened on " + portName);
+            
+            isReading = true;
+            readThread = new Thread(ReadSerialLoop);
+            readThread.Start();
         }
         catch (System.Exception e) {
             Debug.LogError("Could not open the port: " + e.Message);
         }
     }
-
-    private void Update() {
-        if (port != null && port.IsOpen) {
+    
+    private void ReadSerialLoop() {
+        while (isReading && port != null && port.IsOpen) {
             try {
                 string line = port.ReadLine();
                 if (!string.IsNullOrEmpty(line)) {
-                    ParseArduinoMessage(line.Trim());
+                    messageQueue.Enqueue(line);
                 }
             }
             catch (System.TimeoutException) {
             }
+            catch (System.Exception e) {
+                Debug.LogError("Error reading from port: " + e.Message);
+            }
+        }
+    }
+
+    private void Update() {
+        while (messageQueue.TryDequeue(out string line)) {
+            ParseArduinoMessage(line.Trim());
         }
     }
     
     public void SendMessageToArduino(string msg) {
         if (port != null && port.IsOpen) {
             port.WriteLine(msg);
-            Debug.Log("[Unity->Arduino] " + msg);
         } else {
             Debug.LogWarning("Port not open, can't send: " + msg);
         }
@@ -67,8 +85,6 @@ public class SerialManager : MonoBehaviour
     
     void ParseArduinoMessage(string line) 
     {
-        Debug.Log("[Arduino->Unity] " + line);
-        
         if (line.StartsWith("TOTAL_SHIPS="))
         {
             string valueStr = line.Substring("TOTAL_SHIPS=".Length);
@@ -129,7 +145,7 @@ public class SerialManager : MonoBehaviour
             if (cmd == "MISS") c = Color.red;
             else if (cmd == "HIT") c = Color.green;
             else if (cmd == "KILL") c = Color.blue;
-            else if (cmd == "REVEAL") c = new Color(0.5f,0f,0.5f);
+            else if (cmd == "REVEAL") c = new Color(0.5f, 0f, 0.5f);
             
             boardVisualizer.SetCellColor(x, y, c);
         }
@@ -143,6 +159,11 @@ public class SerialManager : MonoBehaviour
     }
 
     private void OnDestroy() {
+        isReading = false;
+        if (readThread != null && readThread.IsAlive) {
+            readThread.Join();
+        }
+
         if (port != null && port.IsOpen) {
             port.Close();
         }
