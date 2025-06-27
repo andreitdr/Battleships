@@ -19,3 +19,6 @@ For the game UI, we used Unity Game Engine to create a simple interface that all
 - Game logic implemented in C++
 - User interface designed in Unity
 - Sync between Unity Interface and Arduino LED matrix
+
+### Demo
+A presentation and a real time demo can be seen on YouTube at [this](https://www.youtube.com/watch?v=aKau_hYfvnk) link.
